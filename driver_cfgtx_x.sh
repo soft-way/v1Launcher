@@ -292,7 +292,9 @@ do
              #tmpPort=$[ HostPort + peersPerOrg * ( i - 1 ) ]
              tmpPort=$[ peerPort + peersPerOrg * ( i - 1 ) ]
              echo "        AnchorPeers:" >> $cfgOutFile
-             echo "            - Host: peer$((i-1)).$HostIP1" >> $cfgOutFile
+             echo "            - Host: peer$((2*i-2)).$HostIP1" >> $cfgOutFile
+             echo "              Port: 7051" >> $cfgOutFile
+             echo "            - Host: peer$((2*i-1)).$HostIP1" >> $cfgOutFile
              echo "              Port: 7051" >> $cfgOutFile
              echo "" >> $cfgOutFile
 

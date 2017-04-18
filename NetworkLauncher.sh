@@ -11,7 +11,7 @@ function printHelp {
 
    echo "Usage: "
    echo " ./NetworkLauncher.sh [opt] [value] "
-   echo "    -z: number of ca, default=0"
+   echo "    -z: number of ca, default=2"
    echo "    -d: ledger database type, default=goleveldb"
    echo "    -f: profile string, default=test"
    echo "    -h: hash type, default=SHA2"
@@ -40,10 +40,10 @@ function printHelp {
 PROFILE_STRING="test"
 ordServType="solo"
 nKafka=0
-nCA=0
+nCA=2
 nOrderer=1
-nOrg=1
-nPeersPerOrg=1
+nOrg=2
+nPeersPerOrg=2
 ledgerDB="goleveldb"
 hashType="SHA2"
 secType="256"
@@ -187,6 +187,9 @@ CRYPTOEXE=$CryptoBaseDir/cryptogen
 echo "$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg"
 $CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg
 
+rm -rf ~/$namespace
+mkdir ~/$namespace
+
 echo " "
 echo "        ####################################################### "
 echo "        #                 generate tls              # "
@@ -194,6 +197,9 @@ echo "        ####################################################### "
 echo " "
 echo "generate tls ..."
 ./tls.sh
+
+cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config ~/$namespace
+cp -rp tls  ~/$namespace
 
 echo " "
 echo "        ####################################################### "
@@ -205,7 +211,7 @@ cd $CWD
 echo "current working directory: $PWD"
 
 echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
-./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace
+./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace -b ~/$namespace/crypto-config
 
 echo " "
 echo "        ####################################################### "
@@ -215,6 +221,9 @@ echo " "
 CFGGenDir=$GOPATH/src/github.com/hyperledger/fabric/build/bin
 CFGEXE=$CFGGenDir"/configtxgen"
 cp configtx.yaml $FabricDir"/common/configtx/tool"
+
+cp configtx.yaml ~/$namespace
+
 #cd $CFGGenDir
 if [ ! -f $CFGEXE ]; then
     cd $FabricDir
@@ -254,12 +263,8 @@ echo "current working directory: $PWD"
 nPeers=$[ nPeersPerOrg * nOrg ]
 echo "number of peers: $nPeers"
 
-rm -rf ~/$namespace
-mkdir ~/$namespace
-cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config ~/$namespace
 cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/orderer.block ~/$namespace
 cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/mychannel.tx ~/$namespace
-cp -rp tls  ~/$namespace
 
 echo "All stuff generated under ~/$namespace"
 
