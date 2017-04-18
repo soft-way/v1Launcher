@@ -6,7 +6,7 @@
 
 HostIP1="0.0.0.0"
 HostPort=7050
-ordererPort=5005
+ordererPort=7050
 kafkaPort=9092
 peerPort=7061
 
@@ -292,8 +292,8 @@ do
              #tmpPort=$[ HostPort + peersPerOrg * ( i - 1 ) ]
              tmpPort=$[ peerPort + peersPerOrg * ( i - 1 ) ]
              echo "        AnchorPeers:" >> $cfgOutFile
-             echo "            - Host: $HostIP1" >> $cfgOutFile
-             echo "              Port: $tmpPort" >> $cfgOutFile
+             echo "            - Host: peer$((i-1)).$HostIP1" >> $cfgOutFile
+             echo "              Port: 7051" >> $cfgOutFile
              echo "" >> $cfgOutFile
 
           done

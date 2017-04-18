@@ -23,6 +23,7 @@ function printHelp {
    echo "    -s: security type, default=256"
    echo "    -t: ledger orderer service type [solo|kafka], default=solo"
    echo "    -c: crypto directory, default=$GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen"
+   echo "    -N: namespace"
    echo "    -w: host ip, default=0.0.0.0"
    echo "    -F: local MSP base directory, default=$GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config"
    echo "    -G: src MSP base directory, default=/opt/hyperledger/fabric/msp/crypto-config"
@@ -49,9 +50,10 @@ secType="256"
 CryptoBaseDir=$GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen
 nChannel=1
 HostIP1="0.0.0.0"
+namespace="my.com"
 
 
-while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:F:G:S:" opt; do
+while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:S:" opt; do
   case $opt in
     # peer environment options
     z)
@@ -111,6 +113,11 @@ while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:F:G:S:" opt; do
     c)
       CryptoBaseDir=$OPTARG
       echo "CryptoBaseDir: $CryptoBaseDir"
+      ;;
+
+    N)
+      namespace=$OPTARG
+      echo "namespace: $namespace"
       ;;
 
     w)
@@ -182,6 +189,14 @@ $CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peer
 
 echo " "
 echo "        ####################################################### "
+echo "        #                 generate tls              # "
+echo "        ####################################################### "
+echo " "
+echo "generate tls ..."
+./tls.sh
+
+echo " "
+echo "        ####################################################### "
 echo "        #                 generate configtx.yaml              # "
 echo "        ####################################################### "
 echo " "
@@ -190,7 +205,7 @@ cd $CWD
 echo "current working directory: $PWD"
 
 echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
-./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1
+./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace
 
 echo " "
 echo "        ####################################################### "
@@ -207,7 +222,7 @@ if [ ! -f $CFGEXE ]; then
     cd $CWD
 fi
 #create orderer blocks
-ordBlock=$ordererDir"/orderer.block"
+ordBlock=$CryptoBaseDir"/orderer.block"
 echo "$CFGEXE -profile $ORG_PROFILE -outputBlock $ordBlock"
 $CFGEXE -profile $ORG_PROFILE -outputBlock $ordBlock
 
@@ -219,11 +234,15 @@ echo "        ####################################################### "
 echo " "
 for (( i=1; i<=$nChannel; i++ ))
 do
-    channelTx=$ordererDir"/"$CHAN_PROFILE$i".tx"
-    #channelTx=$ordererDir"/mychannel.tx"
+    if [ $nChannel -eq 1 ]; then
+        channelTx=$CryptoBaseDir"/mychannel.tx"
+    else
+        channelTx=$CryptoBaseDir"/"$CHAN_PROFILE$i".tx"
+    fi
     echo "$CFGEXE -profile $ORG_PROFILE -channelID $CHAN_PROFILE"$i" -outputCreateChannelTx $channelTx"
     $CFGEXE -profile $ORG_PROFILE -channelID $CHAN_PROFILE"$i" -outputCreateChannelTx $channelTx
 done
+
 
 echo " "
 echo "        ####################################################### "
@@ -234,10 +253,14 @@ echo "generate docker-compose.yml ..."
 echo "current working directory: $PWD"
 nPeers=$[ nPeersPerOrg * nOrg ]
 echo "number of peers: $nPeers"
-echo "./driver_GenOpt.sh -a create -z $nCA -p $nPeersPerOrg -r $nOrg -o $nOrderer -k $nKafka -t $ordServType -d $ordServType -F $MSPDir -G $SRCMSPDir -S $TLSDir"
-if [ -z $TLSDir ]; then
-    ./driver_GenOpt.sh -a create -z $nCA -p $nPeersPerOrg -r $nOrg -o $nOrderer -k $nKafka -t $ordServType -d $ordServType -F $MSPDir -G $SRCMSPDir
-else
-    ./driver_GenOpt.sh -a create -z $nCA -p $nPeersPerOrg -r $nOrg -o $nOrderer -k $nKafka -t $ordServType -d $ordServType -F $MSPDir -G $SRCMSPDir -S $TLSDir
-fi
+
+rm -rf ~/$namespace
+mkdir ~/$namespace
+cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config ~/$namespace
+cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/orderer.block ~/$namespace
+cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/mychannel.tx ~/$namespace
+cp -rp tls  ~/$namespace
+
+echo "All stuff generated under ~/$namespace"
+
 
