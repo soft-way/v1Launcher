@@ -196,7 +196,7 @@ echo "        #                 generate tls              # "
 echo "        ####################################################### "
 echo " "
 echo "generate tls ..."
-./tls.sh
+./tls.sh -N $namespace
 
 cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config ~/$namespace
 cp -rp tls  ~/$namespace

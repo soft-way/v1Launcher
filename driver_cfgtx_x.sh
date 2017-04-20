@@ -211,13 +211,13 @@ do
       elif [ "$t1" == "Addresses:" ]; then
           echo "$line" >> $cfgOutFile
           #echo "         - $peerIP":"$ordererPort, $peerIP":"$[ ordererPort + 1 ], $peerIP":"$[ ordererPort + 2 ]" >> $cfgOutFile
-          tmp=$peerIP":"$ordererPort
+          tmp=orderer0.$peerIP":"$ordererPort
           tmpPort=$ordererPort
           for (( i=2; i<=$nOrderer; i++  ))
           do
               j=$[ i - 1 ]
               tmpPort=$[ tmpPort + j ]
-              tmp=$tmp", "$peerIP":"$tmpPort
+              tmp=$tmp", "orderer$j.$peerIP":"$tmpPort
           done
           echo "         - $tmp" >> $cfgOutFile
 
