@@ -19,6 +19,7 @@ function printHelp {
    echo "    -n: number of channels, default=1"
    echo "    -o: number of orderers, default=1"
    echo "    -p: number of peers per organization, default=1"
+   echo "    -P: number of peers in each organization, for example 2:3"
    echo "    -r: number of organizations, default=1"
    echo "    -s: security type, default=256"
    echo "    -t: ledger orderer service type [solo|kafka], default=solo"
@@ -51,9 +52,9 @@ CryptoBaseDir=$GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen
 nChannel=1
 HostIP1="0.0.0.0"
 namespace="my.com"
+peerInOrg=""
 
-
-while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:S:" opt; do
+while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:P:S:" opt; do
   case $opt in
     # peer environment options
     z)
@@ -137,6 +138,11 @@ while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:S:" opt; do
       echo "SRCMSPDir: $SRCMSPDir"
       ;;
 
+    P)
+      peerInOrg=$OPTARG
+      echo "peerInOrg: $peerInOrg"
+      ;;
+
     S)
       TLSDir=$OPTARG
       echo "TLSDir: $TLSDir"
@@ -185,7 +191,7 @@ echo "current working directory: $PWD"
 
 CRYPTOEXE=$CryptoBaseDir/cryptogen
 echo "$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg"
-$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg
+$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg -peersInOrg "$peerInOrg"
 
 rm -rf ~/$namespace
 mkdir ~/$namespace
