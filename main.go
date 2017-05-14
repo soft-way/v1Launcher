@@ -40,16 +40,17 @@ var (
 		"number of unique organizations with peers")
 	numPeers = flag.Int("peersPerOrg", 1,
 		"number of peers per organization")
-        peersInOrg = flag.String("peersInOrg", "1:1",
+    peersInOrg = flag.String("peersInOrg", "",
 		"number of peers in each organization") 
+	numOrdererOrgs = flag.Int("ordererOrgs", 1,
+		"number of orderer organizations")
 	numOrderers = flag.Int("ordererNodes", 1,
 		"number of ordering service nodes")
 	baseDir = flag.String("baseDir", ".",
 		"directory in which to place artifacts")
 )
 
-var numOrdererOrgs = 1
-var numPeersInOrg [10]int
+var numPeersInOrg [100]int
 
 func main() {
 	flag.Parse()
@@ -59,15 +60,20 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+    
+    for i := 0; i < *numPeerOrgs; i++ {
+        numPeersInOrg[i] = *numPeers
+	}
+
+    if (*peersInOrg != "") {
         s := strings.Split(*peersInOrg, ":")
         for i := 0; i < *numPeerOrgs; i++ {
-		if (i < len(s)) {
-                        j, err := strconv.Atoi(s[i])
- 			fmt.Println(j, err)
-			numPeersInOrg[i] = j
-		} else {
-			numPeersInOrg[i] = *numPeers
-		}
+		    if (i < len(s)) {
+ 			    j, err := strconv.Atoi(s[i])
+ 			    fmt.Println(j, err)
+			    numPeersInOrg[i] = j
+		    }
+	    }
 	}
 
 	genDir := filepath.Join(*baseDir, "crypto-config")
@@ -82,15 +88,20 @@ func main() {
 			peerOrgNames = append(peerOrgNames, fmt.Sprintf("%s%d", peerOrgBaseName, i))
 		}
 		generatePeerOrgs(genDir, peerOrgNames)
-
 	}
 
 	if *numOrderers > 0 {
-		fmt.Printf("Generating %d orderer organization(s) and %d ordering node(s) ...\n",
-			numOrdererOrgs, *numOrderers)
-		generateOrdererOrg(genDir, fmt.Sprintf("%s1", orderOrgBaseName))
-	}
+		fmt.Printf("Generating %d orderer organization(s) each with %d orderer(s) ...\n",
+			*numOrdererOrgs, *numOrderers)
 
+		// TODO: add ability to specify peer org names
+		// for name just use default base name
+		ordererOrgNames := []string{}
+		for i := 1; i <= *numOrdererOrgs; i++ {
+			ordererOrgNames = append(ordererOrgNames, fmt.Sprintf("%s%d", orderOrgBaseName, i))
+		}
+		generateOrdererOrgs(genDir, ordererOrgNames)
+	}
 }
 
 func generatePeerOrgs(baseDir string, orgNames []string) {
@@ -136,7 +147,39 @@ func generateNodes(baseDir string, nodeNames []string, rootCA *ca.CA) {
 			os.Exit(1)
 		}
 	}
+}
 
+func generateOrdererOrgs(baseDir string, orgNames []string) {
+	var org_idx int
+	org_idx = 0
+	for _, orgName := range orgNames {
+		fmt.Println(orgName)
+		// generate CA
+		orgDir := filepath.Join(baseDir, "ordererOrganizations", orgName)
+		caDir := filepath.Join(orgDir, "ca")
+		mspDir := filepath.Join(orgDir, "msp")
+		orderersDir := filepath.Join(orgDir, "orderers")
+		rootCA, err := ca.NewCA(caDir, orgName)
+		if err != nil {
+			fmt.Printf("Error generating CA for org %s:\n%v\n", orgName, err)
+			os.Exit(1)
+		}
+		err = msp.GenerateVerifyingMSP(mspDir, rootCA)
+		if err != nil {
+			fmt.Printf("Error generating MSP for org %s:\n%v\n", orgName, err)
+			os.Exit(1)
+		}
+
+		// TODO: add ability to specify peer names
+		// for name just use default base name
+		ordererNames := []string{}
+		for i := 1; i <= *numOrderers; i++ {
+			ordererNames = append(ordererNames, fmt.Sprintf("%s%s%d",
+				orgName, ordererBaseName, i))
+		}
+		generateNodes(orderersDir, ordererNames, rootCA)
+		org_idx += 1
+	}
 }
 
 func generateOrdererOrg(baseDir, orgName string) {

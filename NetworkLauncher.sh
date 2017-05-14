@@ -18,9 +18,10 @@ function printHelp {
    echo "    -k: number of kafka, default=solo"
    echo "    -n: number of channels, default=1"
    echo "    -o: number of orderers, default=1"
+   echo "    -O: number of orderer organization, default=1"
    echo "    -p: number of peers per organization, default=1"
    echo "    -P: number of peers in each organization, for example 2:3"
-   echo "    -r: number of organizations, default=1"
+   echo "    -r: number of peer organizations, default=1"
    echo "    -s: security type, default=256"
    echo "    -t: ledger orderer service type [solo|kafka], default=solo"
    echo "    -c: crypto directory, default=$GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen"
@@ -43,7 +44,8 @@ ordServType="solo"
 nKafka=0
 nCA=2
 nOrderer=1
-nOrg=2
+nPeerOrg=2
+nOrdererOrg=1
 nPeersPerOrg=2
 ledgerDB="goleveldb"
 hashType="SHA2"
@@ -54,7 +56,7 @@ HostIP1="0.0.0.0"
 namespace="my.com"
 peerInOrg=""
 
-while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:P:S:" opt; do
+while getopts ":z:d:f:h:k:n:o:O:p:r:t:s:c:w:N:F:G:P:S:" opt; do
   case $opt in
     # peer environment options
     z)
@@ -91,14 +93,19 @@ while getopts ":z:d:f:h:k:n:o:p:r:t:s:c:w:N:F:G:P:S:" opt; do
       echo "number of orderers: $nOrderer"
       ;;
 
+    O)
+      nOrdererOrg=$OPTARG
+      echo "number of orderers: $nOrdererOrg"
+      ;;
+
     p)
       nPeersPerOrg=$OPTARG
       echo "number of peers: $nPeersPerOrg"
       ;;
 
     r)
-      nOrg=$OPTARG
-      echo "number of organizations: $nOrg"
+      nPeerOrg=$OPTARG
+      echo "number of organizations: $nPeerOrg"
       ;;
 
     s)
@@ -167,8 +174,8 @@ done
 #fi
 
 # sanity check
-echo " PROFILE_STRING=$PROFILE_STRING, ordServType=$ordServType, nKafka=$nKafka, nOrderer=$nOrderer"
-echo " nOrg=$nOrg, nPeersPerOrg=$nPeersPerOrg, ledgerDB=$ledgerDB, hashType=$hashType, secType=$secType"
+echo " PROFILE_STRING=$PROFILE_STRING, ordServType=$ordServType, nKafka=$nKafka, nOrdererOrg=$nOrdererOrg, nOrderer=$nOrderer"
+echo " nPeerOrg=$nPeerOrg, nPeersPerOrg=$nPeersPerOrg, ledgerDB=$ledgerDB, hashType=$hashType, secType=$secType"
 
 CHAN_PROFILE=$PROFILE_STRING"Channel"
 ORG_PROFILE=$PROFILE_STRING"Org"
@@ -190,8 +197,8 @@ cd $CWD
 echo "current working directory: $PWD"
 
 CRYPTOEXE=$CryptoBaseDir/cryptogen
-echo "$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg"
-$CRYPTOEXE -baseDir $CryptoBaseDir -ordererNodes $nOrderer -peerOrgs $nOrg -peersPerOrg $nPeersPerOrg -peersInOrg "$peerInOrg"
+echo "$CRYPTOEXE -baseDir $CryptoBaseDir -ordererOrgs $nOrdererOrg -ordererNodes $nOrderer -peerOrgs $nPeerOrg -peersPerOrg $nPeersPerOrg"
+$CRYPTOEXE -baseDir $CryptoBaseDir -ordererOrgs $nOrdererOrg -ordererNodes $nOrderer -peerOrgs $nPeerOrg -peersPerOrg $nPeersPerOrg -peersInOrg "$peerInOrg"
 
 rm -rf ~/$namespace
 mkdir ~/$namespace
@@ -202,7 +209,8 @@ echo "        #                 generate tls              # "
 echo "        ####################################################### "
 echo " "
 echo "generate tls ..."
-./tls.sh -N $namespace
+echo "./tls.sh -N $namespace -O $nOrdererOrg -o $nOrderer -p $nPeerOrg -r $nPeersPerOrg"
+./tls.sh -N $namespace -O $nOrdererOrg -o $nOrderer -p $nPeerOrg -r $nPeersPerOrg
 
 cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config ~/$namespace
 cp -rp tls  ~/$namespace
@@ -216,8 +224,8 @@ echo "generate configtx.yaml ..."
 cd $CWD
 echo "current working directory: $PWD"
 
-echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
-./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace -b ~/$namespace/crypto-config
+echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
+./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace -b ~/$namespace/crypto-config
 
 echo " "
 echo "        ####################################################### "
@@ -273,5 +281,3 @@ cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/orderer.
 cp -rp $GOPATH/src/github.com/hyperledger/fabric/common/tools/cryptogen/mychannel.tx ~/$namespace
 
 echo "All stuff generated under ~/$namespace"
-
-
