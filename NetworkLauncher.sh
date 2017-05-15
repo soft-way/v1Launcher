@@ -20,7 +20,7 @@ function printHelp {
    echo "    -o: number of orderers, default=1"
    echo "    -O: number of orderer organization, default=1"
    echo "    -p: number of peers per organization, default=1"
-   echo "    -P: number of peers in each organization, for example 2:3"
+   echo "    -P: number of peers in each organization, for example 3:4:5"
    echo "    -r: number of peer organizations, default=1"
    echo "    -s: security type, default=256"
    echo "    -t: ledger orderer service type [solo|kafka], default=solo"
@@ -224,8 +224,8 @@ echo "generate configtx.yaml ..."
 cd $CWD
 echo "current working directory: $PWD"
 
-echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
-./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace -b ~/$namespace/crypto-config
+echo "./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -P \"$peerInOrg\" -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $HostIP1"
+./driver_cfgtx_x.sh -o $nOrderer -k $nKafka -p $nPeersPerOrg -P "$peerInOrg" -r $nPeerOrg -h $hashType -s $secType -t $ordServType -f $ORG_PROFILE -w $namespace -b ~/$namespace/crypto-config
 
 echo " "
 echo "        ####################################################### "

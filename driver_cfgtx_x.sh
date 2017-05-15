@@ -16,6 +16,7 @@ function printHelp {
    echo "    -o: number of orderers, default=1"
    echo "    -k: number of kafka, default=0"
    echo "    -p: number of peers per organization, default=1"
+   echo "    -P: number of peers in each organization, for example 3:4:5"
    echo "    -h: hash type, default=SHA2"
    echo "    -r: number of organization, default=1"
    echo "    -s: security service type, default=256"
@@ -86,9 +87,10 @@ hashType="SHA2"
 SecType="256"
 PROFILE_STRING="testOrg"
 MSPBaseDir=$GOPATH"/src/github.com/hyperledger/fabric/common/tools/cryptogen/crypto-config"
+peersInOrg=""
 
 k=0
-while getopts ":o:k:p:s:h:r:t:f:b:w:v:" opt; do
+while getopts ":o:k:p:P:s:h:r:t:f:b:w:v:" opt; do
   case $opt in
     # number of orderers
     o)
@@ -106,6 +108,11 @@ while getopts ":o:k:p:s:h:r:t:f:b:w:v:" opt; do
     p)
       peersPerOrg=$OPTARG
       echo "peersPerOrg: $peersPerOrg"
+      ;;
+
+    P)
+      peersInOrg=$OPTARG
+      echo "peersInOrg: $peersInOrg"
       ;;
 
     h)
@@ -163,8 +170,16 @@ while getopts ":o:k:p:s:h:r:t:f:b:w:v:" opt; do
   esac
 done
 
+peer_org_idx=0
+if [ ! "$peersInOrg" = "" ]; then
+    for peerNum in `echo $peersInOrg | sed 's/:/ /g'`; do
+        peerInOrg[$peer_org_idx]=$peerNum
+        ((peer_org_idx+=1))
+    done
+fi
 
-echo "nOrderer=$nOrderer, peersPerOrg=$peersPerOrg, ordServType=$ordServType, nOrg=$nOrg, hashType=$hashType, SecType=$SecType"
+
+echo "nOrderer=$nOrderer, peersPerOrg=$peersPerOrg, peersInOrg=$peersInOrg, ordServType=$ordServType, nOrg=$nOrg, hashType=$hashType, SecType=$SecType"
 echo "MSPBaseDir=$MSPBaseDir"
 echo "Host IP=$HostIP1, Port=$HostPort"
 echo "Kafka IP=$KafkaAIP, $KafkaBIP, $KafkaCIP"
@@ -180,6 +195,9 @@ elif [ ${#OrgArray[@]} = 0 ]; then
    for (( i=1; i <= $nOrg; i++ ))
    do
        OrgArray[$i]=$i
+       if [ $peer_org_idx -le $i -a $peer_org_idx -ne 0 ]; then
+          break
+       fi
    done
 fi
 #echo "after loop OrgArray length=${#OrgArray[@]}, OrgArray=${OrgArray[@]}"
@@ -269,6 +287,10 @@ do
       elif [ "$t2" == "&PeerOrg" ]; then
           for (( i=1; i<=$nOrg; i++ ))
           do
+             if [ $peer_org_idx -ne 0 ]; then
+                peersPerOrg=${peerInOrg[$((i-1))]}
+             fi
+             
              j=$[ peersPerOrg * ( i - 1 ) + 1 ]
              tt="PeerOrg"$i
              echo "    - &$tt" >> $cfgOutFile
@@ -297,7 +319,10 @@ do
                  echo "              Port: 7051" >> $cfgOutFile
              done
              echo "" >> $cfgOutFile
-
+             
+             if [ $peer_org_idx -le $i -a $peer_org_idx -ne 0 ]; then
+                break
+             fi
           done
 
       else
